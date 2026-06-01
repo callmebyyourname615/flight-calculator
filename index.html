@@ -106,6 +106,7 @@
 
     .input-card,
     .result-card,
+    .saved-card,
     .note-card {
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
@@ -152,6 +153,17 @@
       background: rgba(15, 23, 42, 0.94);
     }
 
+    input[type="time"] {
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
     button {
       border: 0;
       border-radius: 18px;
@@ -175,6 +187,127 @@
 
     button:active {
       transform: translateY(0);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .secondary-btn,
+    .danger-btn,
+    .use-btn {
+      background: rgba(255, 255, 255, 0.075);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .secondary-btn:hover,
+    .danger-btn:hover,
+    .use-btn:hover {
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+    }
+
+    .danger-btn {
+      color: #fecaca;
+      border-color: rgba(248, 113, 113, 0.28);
+    }
+
+    .use-btn {
+      min-height: auto;
+      padding: 10px 12px;
+      font-size: 12px;
+      border-radius: 14px;
+    }
+
+    .saved-card {
+      display: grid;
+      gap: 14px;
+    }
+
+    .saved-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .saved-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .saved-count {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .saved-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .saved-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.58);
+      padding: 14px;
+    }
+
+    .saved-times {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .time-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
+      color: #e2e8f0;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .time-chip strong {
+      color: white;
+    }
+
+    .saved-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-md);
+      color: var(--muted);
+      padding: 16px;
+      text-align: center;
+      font-size: 13px;
     }
 
     .result-grid {
@@ -296,13 +429,21 @@
 
       .input-card,
       .result-card,
+      .saved-card,
       .note-card {
         padding: 16px;
       }
 
       .input-row,
-      .result-grid {
+      .result-grid,
+      .saved-item {
         grid-template-columns: 1fr;
+      }
+
+      .button-group,
+      .saved-actions {
+        width: 100%;
+        flex-direction: column;
       }
 
       button {
@@ -323,6 +464,8 @@
       .shell,
       .input-card,
       .result-card,
+      .saved-card,
+      .saved-item,
       .result,
       .note-card,
       .formula {
@@ -374,9 +517,12 @@
           <div class="input-row">
             <label>
               Flight Start / STD
-              <input id="flightStart" type="time" value="08:20" />
+              <input id="flightStart" type="time" value="08:20" min="00:00" max="23:59" step="60" lang="en-GB" inputmode="numeric" pattern="[0-2][0-9]:[0-5][0-9]" aria-label="Flight start time in 24-hour format" />
             </label>
-            <button id="calculateBtn" type="button">Calculate</button>
+            <div class="button-group">
+              <button id="calculateBtn" type="button">Calculate</button>
+              <button id="addTimeBtn" class="secondary-btn" type="button">Add Time</button>
+            </div>
           </div>
         </section>
 
@@ -411,6 +557,17 @@
           </div>
         </section>
 
+        <section class="saved-card" aria-label="Saved time sets">
+          <div class="saved-header">
+            <div>
+              <h2 class="saved-title">Saved Time Sets</h2>
+              <div id="savedCount" class="saved-count">0 saved</div>
+            </div>
+            <button id="clearSavedBtn" class="danger-btn" type="button">Clear All</button>
+          </div>
+          <div id="savedList" class="saved-list"></div>
+        </section>
+
         <section class="note-card">
           <div class="formula">Start Prepare = Flight Start - 4h<br>Airport Report = Flight Start - 2h</div>
           <div id="dayNote" class="day-note"></div>
@@ -426,6 +583,10 @@
   <script>
     const flightStartInput = document.getElementById("flightStart");
     const calculateBtn = document.getElementById("calculateBtn");
+    const addTimeBtn = document.getElementById("addTimeBtn");
+    const clearSavedBtn = document.getElementById("clearSavedBtn");
+    const savedListEl = document.getElementById("savedList");
+    const savedCountEl = document.getElementById("savedCount");
 
     const prepareTimeEl = document.getElementById("prepareTime");
     const airportTimeEl = document.getElementById("airportTime");
@@ -436,14 +597,24 @@
 
     const PREPARE_BUFFER_MINUTES = 240;
     const AIRPORT_BUFFER_MINUTES = 120;
+    const SAVED_TIME_SETS_KEY = "flightPrepareCalculator.savedTimeSets";
 
     function pad(value) {
       return String(value).padStart(2, "0");
     }
 
+    function normalizeTime(time) {
+      const match = String(time || "").match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return "00:00";
+
+      const hours = Math.min(Math.max(Number(match[1]), 0), 23);
+      const minutes = Math.min(Math.max(Number(match[2]), 0), 59);
+      return `${pad(hours)}:${pad(minutes)}`;
+    }
+
     function timeToMinutes(time) {
-      const parts = time.split(":").map(Number);
-      if (parts.length !== 2 || parts.some(Number.isNaN)) return 0;
+      const normalizedTime = normalizeTime(time);
+      const parts = normalizedTime.split(":").map(Number);
       return parts[0] * 60 + parts[1];
     }
 
@@ -459,39 +630,135 @@
       return totalMinutes < 0;
     }
 
-    function calculate() {
-      const flightStart = flightStartInput.value || "00:00";
+    function getCalculation(timeValue) {
+      const flightStart = normalizeTime(timeValue || "00:00");
       const stdMinutes = timeToMinutes(flightStart);
-
       const prepareMinutes = stdMinutes - PREPARE_BUFFER_MINUTES;
       const airportMinutes = stdMinutes - AIRPORT_BUFFER_MINUTES;
 
-      const prepareTime = minutesToTime(prepareMinutes);
-      const airportTime = minutesToTime(airportMinutes);
+      return {
+        flightStart,
+        prepareMinutes,
+        airportMinutes,
+        prepareTime: minutesToTime(prepareMinutes),
+        airportTime: minutesToTime(airportMinutes),
+        preparePrevious: isPreviousDay(prepareMinutes),
+        airportPrevious: isPreviousDay(airportMinutes)
+      };
+    }
 
-      stdTimeEl.textContent = flightStart;
-      prepareTimeEl.textContent = prepareTime;
-      airportTimeEl.textContent = airportTime;
+    function calculate() {
+      const result = getCalculation(flightStartInput.value);
+      flightStartInput.value = result.flightStart;
 
-      const preparePrevious = isPreviousDay(prepareMinutes);
-      const airportPrevious = isPreviousDay(airportMinutes);
+      stdTimeEl.textContent = result.flightStart;
+      prepareTimeEl.textContent = result.prepareTime;
+      airportTimeEl.textContent = result.airportTime;
 
-      prepareDescEl.textContent = preparePrevious
+      prepareDescEl.textContent = result.preparePrevious
         ? "ເລີ່ມກຽມຕົວມື້ກ່ອນ"
         : "ເລີ່ມກຽມຕົວ";
 
-      airportDescEl.textContent = airportPrevious
+      airportDescEl.textContent = result.airportPrevious
         ? "ຄວນຮອດສະໜາມບິນມື້ກ່ອນ"
         : "ຄວນຮອດສະໜາມບິນ";
 
-      if (preparePrevious || airportPrevious) {
+      if (result.preparePrevious || result.airportPrevious) {
         dayNoteEl.textContent = "Note: ບາງເວລາຖືກຄໍານວນເປັນມື້ກ່ອນ ເພາະຫັກເວລາກ່ອນ Flight Start.";
       } else {
         dayNoteEl.textContent = "";
       }
+
+      return result;
+    }
+
+    function loadSavedTimeSets() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SAVED_TIME_SETS_KEY) || "[]");
+        return Array.isArray(saved) ? saved : [];
+      } catch (error) {
+        console.warn("Could not load saved time sets", error);
+        return [];
+      }
+    }
+
+    function saveTimeSets(timeSets) {
+      localStorage.setItem(SAVED_TIME_SETS_KEY, JSON.stringify(timeSets));
+    }
+
+    function renderSavedTimeSets() {
+      const timeSets = loadSavedTimeSets();
+      savedCountEl.textContent = `${timeSets.length} saved`;
+      clearSavedBtn.disabled = timeSets.length === 0;
+
+      if (timeSets.length === 0) {
+        savedListEl.innerHTML = '<div class="empty-state">No saved time yet. Choose STD time, then click Add Time.</div>';
+        return;
+      }
+
+      savedListEl.innerHTML = timeSets
+        .map((item) => `
+          <div class="saved-item" data-flight-start="${item.flightStart}">
+            <div class="saved-times">
+              <span class="time-chip">STD <strong>${item.flightStart}</strong></span>
+              <span class="time-chip">Prepare <strong>${item.prepareTime}</strong></span>
+              <span class="time-chip">Airport <strong>${item.airportTime}</strong></span>
+            </div>
+            <div class="saved-actions">
+              <button class="use-btn" type="button" data-action="use" data-flight-start="${item.flightStart}">Use</button>
+              <button class="use-btn danger-btn" type="button" data-action="delete" data-flight-start="${item.flightStart}">Delete</button>
+            </div>
+          </div>
+        `)
+        .join("");
+    }
+
+    function addCurrentTimeSet() {
+      const result = calculate();
+      const timeSets = loadSavedTimeSets();
+      const nextTimeSets = timeSets.filter((item) => item.flightStart !== result.flightStart);
+
+      nextTimeSets.unshift({
+        flightStart: result.flightStart,
+        prepareTime: result.prepareTime,
+        airportTime: result.airportTime,
+        createdAt: new Date().toISOString()
+      });
+
+      saveTimeSets(nextTimeSets);
+      renderSavedTimeSets();
+    }
+
+    function deleteTimeSet(flightStart) {
+      const nextTimeSets = loadSavedTimeSets().filter((item) => item.flightStart !== flightStart);
+      saveTimeSets(nextTimeSets);
+      renderSavedTimeSets();
+    }
+
+    function clearSavedTimeSets() {
+      localStorage.removeItem(SAVED_TIME_SETS_KEY);
+      renderSavedTimeSets();
     }
 
     calculateBtn.addEventListener("click", calculate);
+    addTimeBtn.addEventListener("click", addCurrentTimeSet);
+    clearSavedBtn.addEventListener("click", clearSavedTimeSets);
+
+    savedListEl.addEventListener("click", function(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+
+      const flightStart = button.dataset.flightStart;
+
+      if (button.dataset.action === "use") {
+        flightStartInput.value = flightStart;
+        calculate();
+      }
+
+      if (button.dataset.action === "delete") {
+        deleteTimeSet(flightStart);
+      }
+    });
 
     flightStartInput.addEventListener("keydown", function(event) {
       if (event.key === "Enter") {
@@ -500,6 +767,7 @@
     });
 
     calculate();
+    renderSavedTimeSets();
   </script>
 </body>
 </html>
